@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name keyboard_vero2)(type KiCad)(uri ${KIPRJMOD}/keyboard_vero2.pretty)(options "")(descr ""))
+)
