@@ -1941,7 +1941,7 @@ Wire Bus Line
 Text Label 3850 2900 0    50   ~ 0
 PHI
 Text Label 3850 2700 0    50   ~ 0
-OE
+~OE
 Wire Wire Line
 	5550 3350 5500 3350
 Wire Wire Line
@@ -1972,8 +1972,6 @@ Wire Wire Line
 	5500 3100 5500 3150
 Wire Wire Line
 	5500 3150 5550 3150
-Wire Wire Line
-	5200 3250 5550 3250
 $Comp
 L Connector:Conn_01x15_Male J1
 U 1 1 5EEB3EB6
@@ -2335,16 +2333,11 @@ Wire Wire Line
 Wire Wire Line
 	3750 2000 3750 2300
 Wire Wire Line
-	5200 3250 5200 5250
-Wire Wire Line
 	3400 3700 3950 3700
 Wire Wire Line
 	3400 2900 5100 2900
 Wire Wire Line
 	3400 2700 5200 2700
-Wire Wire Line
-	5200 2700 5200 3250
-Connection ~ 5200 3250
 Wire Wire Line
 	5100 2900 5100 5150
 Wire Wire Line
@@ -2475,6 +2468,14 @@ Wire Wire Line
 	7450 3950 7750 3950
 Wire Wire Line
 	6600 3950 7150 3950
+Text Notes 7400 7500 0    69   Italic 14
+Homebrew Keyboard with Parallel Interface
+Text Notes 10600 7650 0    69   ~ 14
+2
+Text Notes 8150 7650 0    50   ~ 0
+08/06/2020
+Wire Wire Line
+	5500 3250 5500 3350
 Wire Bus Line
 	5350 2250 5350 2750
 Wire Bus Line
@@ -2483,10 +2484,9 @@ Wire Bus Line
 	4050 3100 4050 3850
 Wire Bus Line
 	10750 4350 10750 5800
-Text Notes 7400 7500 0    69   Italic 14
-Homebrew Keyboard with Parallel Interface
-Text Notes 10600 7650 0    69   ~ 14
-2
-Text Notes 8150 7650 0    50   ~ 0
-08/06/2020
+Wire Wire Line
+	5500 3250 5550 3250
+Connection ~ 5500 3350
+Wire Wire Line
+	5200 2700 5200 5250
 $EndSCHEMATC
