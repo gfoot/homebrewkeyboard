@@ -8,5 +8,33 @@ This one uses a parallel interface, ideal for connecting directly to the address
 
 I also have one with a serial interface, more tailored for Arduino - let me know if you're interested and I'll publish it as a separate project.
 
+# Schematic
+
 <img src="Schematic.png" alt="Annotated schematic of George's Homebrew Keyboard (6502 edition)" width="512">
 
+# General operation
+
+Connect:
+* A0..A2 to the CPU's address bus
+* D0..7 to the CPU's data bus
+* PHI2 to the CPU's phi2 clock signal (the same one you use to time access to RAM, ROM, etc)
+* ~OE to a combination of phi2, R/~W, and some address decoding logic
+
+~OE needs to be kept high unless all of the following are true:
+* phi2 is high (indicating the bus is active)
+* R/~W is low (indicating a write cycle)
+* high address pins map to keyboard I/O region
+
+For the last one, my own 6502 computer simply uses an LS138 fed by the top three address lines, and one of the LS138's outputs drives this logic - the same way I generate chip-select signals for other memory-mapped parts of the computer.
+
+Then the CPU can simply read from the mapped addresses.  The lowest address - for example, $a000 - corresponds to one "row" of keys; each bit is 1 if the corresponding key is not pressed, and 0 if it is pressed.  The next address, $a001, corresponds to the next "row", up to the final row at $a007.  The word "row" refers to the schematic, not the physical layout.
+
+As an example, the shift keys correspond to bit 1 of $a000; the ctrl keys correspond to bit 3.  I think bit 0 is Esc, and bit 2 is the space bar.  $a001's bit 0 corresponds to the tilde/backtick key; bit 1 is probably tab or Q; bit 2 is A; and so on.  The exact layout was tweaked to make it easier to build on veroboard, while also ensuring that rollover works well with modifier keys in particular; as usual for this sort of thing, you need to a lot more translation in software.  Ping me if there's interest in the code for this and I can provide it.
+
+# Board layout
+
+<img src="BoardLayout.png" alt="Physical board layout" width="512">
+
+The board layout shows the physical layout of the components.  The veroboard tracks run horizontally, and - where they are used - they are shown in dark red.  Green traces indicate fairly short links, mostly made with bare wire.  Pink traces indicate longer insulated wire links.  The (X) marks show where you need to break the existing veroboard tracks.
+
+Some connections occur underneath switches, or pass entirely under a switch.  This doesn't always work well in practice, and I ended up routing some wires differently to this diagram.  It depends on the thickness of the wire and the physical shape of your switches.
