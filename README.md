@@ -12,6 +12,16 @@ I also have one with a serial interface, more tailored for Arduino - let me know
 
 <img src="Schematic.png" alt="Annotated schematic of George's Homebrew Keyboard (6502 edition)" width="512">
 
+# Bill of materials
+
+* 8x resistor, 10k or thereabouts
+* 8x diode, e.g. 1N4007
+* 66x 4-pin push-switch with 5.08mmx5.08mm (0.2") pin pitch
+* 1x 74LS138 address decoder
+* 1x 74LS374 8-bit latch/register with tri-state outputs
+* 1x 15-pin header for connecting wires (ideally horizontal, with bent pins)
+* Veroboard - 39 tracks of 64 holes, or larger
+
 # General operation
 
 Connect:
