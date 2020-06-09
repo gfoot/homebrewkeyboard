@@ -1,0 +1,267 @@
+// Keyboard module
+//
+// Be sure to configure the base address, zero-page addresses, and vec_processascii, appropriately.
+//
+// Main entry points:
+//
+//    kbd_init      - initialize the subsystem
+//    kbd_checkkeys - poll for newly-pressed keys; ultimately calls through vec_processascii for any new keys
+//    kbd_query     - test if a specific key (keycode in X) is pressed; return C=0 if pressed, C=1 if not
+
+
+// Keyboard memory-mapped I/O base address
+kbd_base = $a000
+
+// Zero page storage
+kbd_modifiers = $90
+kbd_lastkey1 = $91
+kbd_lastkey2 = $92
+
+// Vector location pointing to user code for handling typing
+vec_processascii = $200
+
+
+// Useful keycodes
+kbd_code_ctrl = $08
+kbd_code_shift = $18
+kbd_code_left = $37
+kbd_code_right = $30
+kbd_code_up = $38
+kbd_code_down = $2f
+
+
+// ASCII-like codes for special keys
+kbd_ascii_shift = 1
+kbd_ascii_ctrl = 2
+kbd_ascii_caps = 3
+kbd_ascii_bs = 8
+kbd_ascii_tab = 9
+kbd_ascii_enter = 10
+kbd_ascii_esc = 27
+kbd_ascii_f1 = $81
+kbd_ascii_f2 = $82
+kbd_ascii_f3 = $83
+kbd_ascii_f4 = $84
+kbd_ascii_f5 = $85
+kbd_ascii_left = $90
+kbd_ascii_right = $91
+kbd_ascii_up = $92
+kbd_ascii_down = $93
+
+
+    // Keycode-to-ascii lookup table
+kbd_table
+	.byte   27, '`', '1', '2', '3', '4', '5', '6'
+	.byte    2,   9, 'q', 'w', 'e', 'r', 't', 'y'
+	.byte  ' ',   3, 'a', 's', 'd', 'f', 'g', 'h'
+	.byte    1, $5c, 'z', 'x', 'c', 'v', 'b', 'n'
+	.byte  $84, 'm', ',', '.', '/', $81, $82, $83
+	.byte  $85, 'j', 'k', 'l', ';', $27, $0a, $93
+	.byte  $91, 'u', 'i', 'o', 'p', '[', ']', $90
+	.byte  $92, '7', '8', '9', '0', '-', '=', 8
+
+    // Beginning of shift lookup table, from character $27 (which translates to $40)
+kbd_shiftlookup_27
+	.byte $40
+
+    // Naughty code hiding in lookup table
+kbd_toascii
+	lda kbd_table,x    // $28, $29, $2A
+	rts                // $2B
+
+	// Continuing shift lookup table with $2C-$3D
+	.byte                     $3C, $5F, $3E, $3F
+	.byte $29, $21, $22, $23, $24, $25, $5E, $26
+	.byte $2A, $28, $00, $3A, $00, $2B
+
+	// And $5B, $5C, $5D, xx, xx, $60, which have an extra offset applied before look-up
+	.byte $7B, $7C, $7D, $00, $00, $7E
+
+kbd_applyshift
+	// only works for chars in table where $27<=Y<=$60
+
+	cpy #$3E
+	bcc kbd_shiftdolookup
+	
+	// More than $3E means $5B-$60
+	// Map $5B down to $3E and continue with the lookup
+	// Carry is already set
+	tya
+	sbc #$1D
+	tay
+
+kbd_shiftdolookup
+	lda kbd_shiftlookup_27-$27,y
+	tay
+	rts
+
+
+kbd_togglecapslock
+	pha
+	lda kbd_modifiers
+	eor #4
+	sta kbd_modifiers
+	pla
+	rts
+
+
+	// Check for changes in pressed keys.  We track modifier keys in 
+	// kbd_modifiers, and call kbd_newkey with keycode in X when a new
+	// key is pressed, tracking up to two presses simultaneously
+kbd_checkkeys
+	pha : txa : pha : tya : pha
+
+    // update modifier byte
+    // CTRL in bit 0, SHIFT in bit 1
+    lda kbd_modifiers
+    lsr : lsr              // discard old modifier bits
+    ldx #kbd_code_shift
+    jsr kbd_query          // clear carry if shift pressed
+    rol                    // rotate shift bit into modifiers
+    ldx #kbd_code_ctrl
+    jsr kbd_query          // clear carry if ctrl pressed
+    rol                    // rotate ctrl bit into modifiers
+	eor #3                 // flip both bits so 1=pressed
+    sta kbd_modifiers
+    
+    // check if existing keys are still pressed, or replace with new keys
+    ldx kbd_lastkey2
+    jsr kbd_checkkeyorscan
+    stx kbd_lastkey2
+    ldx kbd_lastkey1
+    jsr kbd_checkkeyorscan
+
+    // swap if only one key is pressed so that it's in kbd_lastkey1
+    cpx #$ff
+    bne kbd_checkkeysnoswap
+    ldy #$ff
+    ldx kbd_lastkey2
+    sty kbd_lastkey2
+kbd_checkkeysnoswap
+    stx kbd_lastkey1
+
+	pla : tay : pla : tax : pla
+    rts
+ 
+
+    // Check if the keycode in X is still pressed; return it if so
+    // If not, scan and return any newly-pressed key, or $ff if none   
+kbd_checkkeyorscan
+    cpx #$ff
+    beq kbd_scan
+    jsr kbd_query
+    bcs kbd_scan     // no longer pressed
+	// jmp kbd_keyreleased
+kbd_scandone
+	rts
+
+	// Scan keyboard but ignore modifiers and last known pressed keys
+    // Process any newly-pressed key (convert to ascii, etc)
+    // Return keycode of first found unignored pressed key, or $ff if none
+kbd_scan
+    ldx #64
+kbd_scanloop
+    dex
+    bmi kbd_scandone     // no new keys found
+    jsr kbd_query
+    bcs kbd_scanloop
+    cpx #kbd_code_ctrl   // ignore ctrl
+    beq kbd_scanloop
+    cpx #kbd_code_shift  // ignore shift
+    beq kbd_scanloop
+    cpx kbd_lastkey1     // ignore lastkey1
+    beq kbd_scanloop
+    cpx kbd_lastkey2     // ignore lastkey2
+    beq kbd_scanloop
+    // new key pressed
+	//jmp kbd_keypressed
+
+
+	// Pressed keycode is in X and must be restored before returning
+kbd_keypressed
+	ldy kbd_table,x
+
+	// Chars above $80 don't do Shift/Ctrl/Caps processing
+	bmi kbd_postmodifiers
+
+	// Nor do chars below 33
+	cpy #33
+	bpl kbd_processmodifiers
+	
+	// Below 33, everything except Caps Lock gets passed straight through
+	cpy #3
+	bne kbd_postmodifiers
+
+	// Caps lock toggles the caps lock bit without usual processing
+	jmp kbd_togglecapslock
+
+kbd_processmodifiers
+	lda kbd_modifiers
+
+	// Chars from $61 up are letters
+	cpy #$61
+	bmi kbd_notletter
+	
+	// process letter - check ctrl bit
+	lsr
+	bcc kbd_letternotctrl
+
+	// ctrl-letter
+	tya
+	eor #$60
+	tay
+	jmp kbd_postmodifiers
+
+kbd_letternotctrl
+	// shift is in bit 0 now, caps in bit 1, carry is clear
+	adc #1                // if shift bit is set, toggle caps bit
+	and #2                // test for caps bit set now
+	beq kbd_postmodifiers
+	tya
+	eor #$20              // apply caps
+	tay
+	jmp kbd_postmodifiers
+
+kbd_notletter
+	// Chars from $20 to $60 are punctuation and numbers,
+	// they only respond to shift
+	and #2
+	beq kbd_postmodifiers    // shift not pressed
+	jsr kbd_applyshift
+
+kbd_postmodifiers
+	jmp (vec_processascii)
+
+
+    // Initialize the keyboard system's data storage
+kbd_init
+	lda #$ff
+	sta kbd_lastkey1
+	sta kbd_lastkey2
+	rts
+
+
+	// On entry: X = keycode
+	// On exit: C clear if key is pressed
+kbd_query
+	pha : tya : pha : txa : pha
+	eor #$ff
+	tay
+	and #7
+	tax
+	tya
+	lsr : lsr : lsr
+	and #7
+	tay
+	lda kbd_base,x
+kbd_queryloop
+	dey
+	bmi kbd_queryloopend
+	lsr
+	jmp kbd_queryloop
+kbd_queryloopend
+	lsr
+	pla : tax : pla : tay : pla
+	rts
+
+
