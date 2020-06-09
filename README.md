@@ -39,7 +39,13 @@ For the last one, my own 6502 computer simply uses an LS138 fed by the top three
 
 Then the CPU can simply read from the mapped addresses.  The lowest address - for example, $a000 - corresponds to one "row" of keys; each bit is 1 if the corresponding key is not pressed, and 0 if it is pressed.  The next address, $a001, corresponds to the next "row", up to the final row at $a007.  The word "row" refers to the schematic, not the physical layout.
 
-As an example, the shift keys correspond to bit 1 of $a000; the ctrl keys correspond to bit 3.  I think bit 0 is Esc, and bit 2 is the space bar.  $a001's bit 0 corresponds to the tilde/backtick key; bit 1 is probably tab or Q; bit 2 is A; and so on.  The exact layout was tweaked to make it easier to build on veroboard, while also ensuring that rollover works well with modifier keys in particular; as usual for this sort of thing, you need to a lot more translation in software.  Ping me if there's interest in the code for this and I can provide it.
+As an example, the shift keys correspond to bit 1 of $a000; the ctrl keys correspond to bit 3.  I think bit 0 is Esc, and bit 2 is the space bar.  $a001's bit 0 corresponds to the tilde/backtick key; bit 1 is probably tab or Q; bit 2 is A; and so on.  The exact layout was tweaked to make it easier to build on veroboard, while also ensuring that rollover works well with modifier keys in particular; as usual for this sort of thing, you need to do a lot more translation in software.
+
+See the [kbd module](code/kbd.6502) which contains a full table of characters by row/column.
+
+# Sample code
+
+See [sample code](code/SampleCode.md) and [kbd module](code/kbd.6502).
 
 # Board layout
 
